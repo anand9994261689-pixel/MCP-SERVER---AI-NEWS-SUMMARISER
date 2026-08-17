@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickNews AI — Modern MCP News Summarizer</title>
+  <!-- SEO & Premium Fonts -->
+  <meta name="description" content="Instant AI-powered news summaries using modular in-process Model Context Protocol tools. Supports Gemini, Ollama, and offline smart analysis.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       1. DESIGN SYSTEM & CORE VARIABLES
+       ========================================================================== */
+    :root {
+      --font-display: 'Outfit', sans-serif;
+      --font-body: 'Inter', sans-serif;
+
+      /* Dark Slate & Indigo Glass Theme */
+      --bg-dark: #070a13;
+      --card-bg: rgba(13, 20, 38, 0.45);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-glow: rgba(99, 102, 241, 0.2);
+      
+      /* Glowing Accent Gradients */
+      --accent-primary: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+      --accent-secondary: linear-gradient(135deg, #d946ef 0%, #8b5cf6 100%);
+      --accent-green: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      --accent-red: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+      --accent-orange: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      
+      /* Text Colors */
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dark: #64748b;
+      
+      /* Status Gradients */
+      --glow-cyan: rgba(6, 182, 212, 0.15);
+      --glow-violet: rgba(139, 92, 246, 0.15);
+      
+      --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient Background Spotlights */
+    .spotlight {
+      position: absolute;
+      width: 50vw;
+      height: 50vw;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(0,0,0,0) 70%);
+      top: -10vw;
+      left: -10vw;
+      pointer-events: none;
+      z-index: 0;
+      animation: floatSpotlight1 20s infinite alternate ease-in-out;
+    }
+
+    .spotlight-alt {
+      position: absolute;
+      width: 45vw;
+      height: 45vw;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, rgba(0,0,0,0) 70%);
+      bottom: -10vw;
+      right: -10vw;
+      pointer-events: none;
+      z-index: 0;
+      animation: floatSpotlight2 25s infinite alternate ease-in-out;
+    }
+
+    /* Mouse Follower Glow Light */
+    #cursorGlow {
+      position: fixed;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.05) 0%, rgba(0, 0, 0, 0) 70%);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+
+    @keyframes floatSpotlight1 {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(10vw, 5vw) scale(1.15); }
+    }
+    @keyframes floatSpotlight2 {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(-8vw, -6vw) scale(1.1); }
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.3);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.2);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.35);
+    }
+
+    /* ==========================================================================
+       2. REUSABLE GLASS COMPONENTS & LAYOUT
+       ========================================================================== */
+    .app-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Glowing header bar */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: var(--accent-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-logo::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      top: 0;
+      left: -100%;
+      animation: shine 3s infinite;
+    }
+
+    @keyframes shine {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    .brand-name {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.025em;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.825rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-weight: 500;
+      transition: var(--transition-smooth);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #ef4444;
+      box-shadow: 0 0 10px #ef4444;
+    }
+
+    .status-dot.connected {
+      background-color: #10b981;
+      box-shadow: 0 0 10px #10b981;
+    }
+
+    /* Core Navigation Tabs */
+    .tabs-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .nav-tabs {
+      display: flex;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 0.375rem;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      position: relative;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.625rem 1.5rem;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: var(--transition-smooth);
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      background: rgba(255, 255, 255, 0.07);
+      color: #06b6d4;
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-trigger {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.625rem 1.25rem;
+      border-radius: 14px;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+
+    .settings-trigger:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(99, 102, 241, 0.4);
+      transform: translateY(-2px);
+    }
+
+    /* Glass Panels */
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(18px) saturate(180%);
+      -webkit-backdrop-filter: blur(18px) saturate(180%);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 2.25rem;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+      transition: var(--transition-smooth);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    }
+
+    /* ==========================================================================
+       3. MANUAL MODE UI
+       ========================================================================== */
+    .view-section {
+      display: none;
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .view-section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .grid-manual {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 968px) {
+      .grid-manual {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .input-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .textarea-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .news-textarea {
+      width: 100%;
+      height: 380px;
+      background: rgba(10, 15, 30, 0.7);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 1.25rem;
+      color: var(--text-main);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+      transition: var(--transition-smooth);
+    }
+
+    .news-textarea:focus {
+      border-color: rgba(6, 182, 212, 0.5);
+      box-shadow: 0 0 25px rgba(6, 182, 212, 0.15);
+      background: rgba(10, 15, 30, 0.85);
+    }
+
+    .textarea-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding: 0 0.5rem;
+    }
+
+    .char-count-pill {
+      background: rgba(255,255,255,0.03);
+      padding: 0.25rem 0.625rem;
+      border-radius: 99px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .clear-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: var(--transition-smooth);
+    }
+
+    .clear-btn:hover {
+      color: #f43f5e;
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--accent-primary);
+      color: #ffffff;
+      border: none;
+      padding: 1.1rem 2rem;
+      border-radius: 16px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.05rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+      transition: var(--transition-smooth);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);
+      opacity: 0;
+      transition: var(--transition-smooth);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(59, 130, 246, 0.45);
+    }
+
+    .btn-primary:hover::after {
+      opacity: 1;
+    }
+
+    .btn-primary:active {
+      transform: translateY(1px);
+    }
+
+    /* ==========================================================================
+       4. SUMMARIZATION RESULTS DASHBOARD
+       ========================================================================== */
+    .dashboard-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 400px;
+      text-align: center;
+      border: 1px dashed rgba(255,255,255,0.06);
+      border-radius: 18px;
+      padding: 2rem;
+      background: rgba(255,255,255,0.01);
+    }
+
+    .placeholder-icon {
+      font-size: 3rem;
+      margin-bottom: 1.25rem;
+      opacity: 0.5;
+      animation: bouncePulse 3s infinite ease-in-out;
+    }
+
+    @keyframes bouncePulse {
+      0%, 100% { transform: translateY(0); opacity: 0.4; }
+      50% { transform: translateY(-8px); opacity: 0.8; }
+    }
+
+    .placeholder-text {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      max-width: 320px;
+      line-height: 1.6;
+    }
+
+    /* Dynamic Output Dashboard styling */
+    .summary-dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      height: 100%;
+    }
+
+    .output-card {
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 20px;
+      padding: 1.75rem;
+      background: rgba(10, 15, 30, 0.4);
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .headline-gradient {
+      font-family: var(--font-display);
+      font-size: 1.65rem;
+      font-weight: 800;
+      line-height: 1.35;
+      background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.015em;
+      flex: 1;
+      min-width: 250px;
+    }
+
+    /* Sentiment badging */
+    .badge-sentiment {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      border-radius: 9999px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.85rem;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+      position: relative;
+    }
+
+    .badge-sentiment::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 9999px;
+      background: transparent;
+      z-index: -1;
+      opacity: 0.3;
+    }
+
+    .badge-sentiment.positive {
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .badge-sentiment.positive::before {
+      background: var(--accent-green);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .badge-sentiment.negative {
+      color: #f43f5e;
+      background: rgba(244, 63, 94, 0.08);
+      border: 1px solid rgba(244, 63, 94, 0.25);
+    }
+    .badge-sentiment.negative::before {
+      background: var(--accent-red);
+      box-shadow: 0 0 12px rgba(244, 63, 94, 0.4);
+    }
+
+    .badge-sentiment.neutral {
+      color: #f59e0b;
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+    .badge-sentiment.neutral::before {
+      background: var(--accent-orange);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+    }
+
+    .summary-text-block {
+      font-size: 0.975rem;
+      line-height: 1.7;
+      color: var(--text-muted);
+      border-left: 3px solid rgba(6, 182, 212, 0.3);
+      padding-left: 1rem;
+      margin: 0.5rem 0;
+    }
+
+    .bullet-list-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .bullet-points {
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .bullet-points li {
+      position: relative;
+      padding-left: 1.5rem;
+      font-size: 0.925rem;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
+    .bullet-points li::before {
+      content: '✦';
+      position: absolute;
+      left: 0;
+      color: #8b5cf6;
+      font-size: 0.85rem;
+      top: 0.05rem;
+      text-shadow: 0 0 5px rgba(139, 92, 246, 0.6);
+    }
+
+    .dashboard-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: auto;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--text-main);
+      padding: 0.65rem 1.15rem;
+      border-radius: 12px;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: var(--transition-smooth);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-1px);
+    }
+
+    /* Source type indicators */
+    .badge-offline-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      padding: 0.3rem 0.75rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* Skeleton Loading animations */
+    .skeleton-bar {
+      height: 18px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: loadingShimmer 1.5s infinite;
+      border-radius: 6px;
+      margin-bottom: 0.85rem;
+    }
+
+    @keyframes loadingShimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ==========================================================================
+       5. LIVE NEWS MODE UI
+       ========================================================================== */
+    .categories-bar {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.75rem;
+      margin-bottom: 1.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Hide scrollbar for categories bar */
+    .categories-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .category-btn {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      padding: 0.5rem 1.15rem;
+      border-radius: 99px;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: var(--transition-smooth);
+    }
+
+    .category-btn:hover {
+      background: rgba(255,255,255,0.07);
+      color: var(--text-main);
+    }
+
+    .category-btn.active {
+      background: var(--accent-primary);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+    }
+
+    /* Articles Layout Grid */
+    .articles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 480px) {
+      .articles-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Sleek card architecture */
+    .article-card {
+      background: rgba(13, 20, 38, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 20px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      position: relative;
+      transition: var(--transition-smooth);
+    }
+
+    .article-card:hover {
+      transform: translateY(-4px);
+      background: rgba(13, 20, 38, 0.55);
+      border-color: rgba(99, 102, 241, 0.35);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-dark);
+      font-weight: 600;
+    }
+
+    .article-source {
+      background: rgba(6, 182, 212, 0.1);
+      color: #06b6d4;
+      padding: 0.25rem 0.65rem;
+      border-radius: 99px;
+      border: 1px solid rgba(6, 182, 212, 0.15);
+    }
+
+    .article-date {
+      color: var(--text-dark);
+    }
+
+    .article-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      line-height: 1.4;
+      color: var(--text-main);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-decoration: none;
+      transition: var(--transition-smooth);
+    }
+
+    .article-title:hover {
+      color: #3b82f6;
+    }
+
+    .article-snippet {
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: var(--text-muted);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .btn-card-action {
+      background: transparent;
+      border: none;
+      color: #3b82f6;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.825rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: var(--transition-smooth);
+    }
+
+    .btn-card-action:hover {
+      color: #00e5ff;
+      transform: translateX(2px);
+    }
+
+    .btn-card-summarize {
+      background: rgba(139, 92, 246, 0.1);
+      color: #c084fc;
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      padding: 0.45rem 0.95rem;
+      border-radius: 10px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: var(--transition-smooth);
+    }
+
+    .btn-card-summarize:hover {
+      background: var(--accent-secondary);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+    }
+
+    /* Skeleton grids for loading states */
+    .skeleton-card {
+      background: rgba(13, 20, 38, 0.2);
+      border: 1px solid rgba(255,255,255,0.03);
+      border-radius: 20px;
+      padding: 1.5rem;
+      height: 220px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* ==========================================================================
+       6. GLASS SETTINGS SLIDE DRAWER / MODAL
+       ========================================================================== */
+    .settings-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .settings-backdrop.open {
+      display: flex;
+      opacity: 1;
+    }
+
+    .settings-card {
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(25px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      width: 100%;
+      max-width: 520px;
+      border-radius: 24px;
+      padding: 2.25rem;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+      transform: scale(0.95);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .settings-backdrop.open .settings-card {
+      transform: scale(1);
+    }
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.75rem;
+    }
+
+    .settings-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.5rem;
+      transition: var(--transition-smooth);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .settings-close:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .settings-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .settings-label {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .select-dropdown, .input-textbox {
+      background: rgba(10, 15, 30, 0.7);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      color: var(--text-main);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      outline: none;
+      width: 100%;
+      transition: var(--transition-smooth);
+    }
+
+    .select-dropdown:focus, .input-textbox:focus {
+      border-color: rgba(99, 102, 241, 0.5);
+      background: rgba(10, 15, 30, 0.95);
+    }
+
+    .settings-help {
+      font-size: 0.775rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .btn-settings-save {
+      width: 100%;
+      background: var(--accent-secondary);
+      color: #ffffff;
+      border: none;
+      padding: 0.85rem 1.5rem;
+      border-radius: 12px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+      transition: var(--transition-smooth);
+      margin-top: 0.5rem;
+    }
+
+    .btn-settings-save:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+    }
+
+    /* Password Reveal Icon Wrapper */
+    .input-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .btn-reveal {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: var(--text-dark);
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-reveal:hover {
+      color: var(--text-muted);
+    }
+
+    /* Summarize Overlay Modal for Card-Summarization */
+    .summary-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.7);
+      backdrop-filter: blur(10px);
+      z-index: 101;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .summary-modal.open {
+      display: flex;
+      opacity: 1;
+    }
+
+    .summary-modal-card {
+      background: rgba(13, 20, 38, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      width: 100%;
+      max-width: 680px;
+      border-radius: 24px;
+      padding: 2.25rem;
+      box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+      transform: scale(0.95);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .summary-modal.open .summary-modal-card {
+      transform: scale(1);
+    }
+
+    .summary-modal-close {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.03);
+      transition: var(--transition-smooth);
+    }
+
+    .summary-modal-close:hover {
+      color: var(--text-main);
+      background: rgba(255,255,255,0.08);
+    }
+
+    /* Warning alert boxes */
+    .alert-panel {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(245, 158, 11, 0.06);
+      border: 1px solid rgba(245, 158, 11, 0.15);
+      padding: 0.85rem 1.15rem;
+      border-radius: 12px;
+      color: #f59e0b;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      margin-bottom: 0.5rem;
+    }
+
+    .alert-panel svg {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+    }
+
+    .alert-panel.error {
+      background: rgba(244, 63, 94, 0.06);
+      border: 1px solid rgba(244, 63, 94, 0.15);
+      color: #f43f5e;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Ambient Spotlights -->
+  <div class="spotlight"></div>
+  <div class="spotlight-alt"></div>
+  <div id="cursorGlow"></div>
+
+  <div class="app-container">
+    
+    <!-- 1. APP HEADER -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-logo">Q</div>
+        <h1 class="brand-name">QuickNews AI</h1>
+        <span class="badge-offline-indicator" style="background: rgba(99,102,241,0.08); border-color: rgba(99,102,241,0.15); color: #a5b4fc; font-family: var(--font-display);">MCP v1.0</span>
+      </div>
+      
+      <div class="status-badge" id="serverStatusBadge">
+        <div class="status-dot" id="serverStatusDot"></div>
+        <span id="serverStatusText">Server Connecting...</span>
+      </div>
+    </header>
+
+    <!-- 2. NAVIGATION AND TABS BAR -->
+    <div class="tabs-wrapper">
+      <nav class="nav-tabs">
+        <button class="tab-btn active" id="tabNews" onclick="switchView('news')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8"></path><path d="M15 18h-5"></path><path d="M10 6h8v4h-8V6Z"></path></svg>
+          Live News Mode
+        </button>
+        <button class="tab-btn" id="tabManual" onclick="switchView('manual')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+          Manual Mode
+        </button>
+      </nav>
+
+      <button class="settings-trigger" onclick="toggleSettingsModal(true)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        AI Configuration
+      </button>
+    </div>
+
+    <!-- 3. LIVE NEWS VIEW -->
+    <section id="viewNews" class="view-section active">
+      <!-- Horizontal Category capsules scroll -->
+      <div class="categories-bar">
+        <button class="category-btn active" onclick="setNewsCategory('all', this)">⚡ Latest</button>
+        <button class="category-btn" onclick="setNewsCategory('world', this)">🌍 World</button>
+        <button class="category-btn" onclick="setNewsCategory('technology', this)">💻 Tech</button>
+        <button class="category-btn" onclick="setNewsCategory('business', this)">📈 Business</button>
+        <button class="category-btn" onclick="setNewsCategory('science', this)">🔬 Science</button>
+        <button class="category-btn" onclick="setNewsCategory('entertainment', this)">🎬 Shows</button>
+        <button class="category-btn" onclick="setNewsCategory('sports', this)">⚽ Sports</button>
+      </div>
+
+      <!-- Articles Skeleton / Live Loading Grid -->
+      <div class="articles-grid" id="articlesContainer">
+        <!-- Default Loading Skeletons -->
+        <div class="skeleton-card">
+          <div class="skeleton-bar" style="width: 30%;"></div>
+          <div class="skeleton-bar" style="height: 24px; width: 90%;"></div>
+          <div class="skeleton-bar" style="width: 85%;"></div>
+          <div class="skeleton-bar" style="width: 40%; margin-bottom: 0;"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-bar" style="width: 25%;"></div>
+          <div class="skeleton-bar" style="height: 24px; width: 95%;"></div>
+          <div class="skeleton-bar" style="width: 80%;"></div>
+          <div class="skeleton-bar" style="width: 45%; margin-bottom: 0;"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-bar" style="width: 28%;"></div>
+          <div class="skeleton-bar" style="height: 24px; width: 88%;"></div>
+          <div class="skeleton-bar" style="width: 85%;"></div>
+          <div class="skeleton-bar" style="width: 35%; margin-bottom: 0;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. MANUAL MODE VIEW -->
+    <section id="viewManual" class="view-section">
+      <div class="grid-manual">
+        <!-- Left: Text Input Glass Card -->
+        <div class="glass-card input-section">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #06b6d4;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Paste News Article
+          </h2>
+          <div class="textarea-wrapper">
+            <textarea id="newsInput" class="news-textarea" placeholder="Paste full article contents, text transcripts, or raw stories here... (minimum 50 characters)" oninput="updateCharCount()"></textarea>
+            <div class="textarea-actions">
+              <span class="char-count-pill" id="charCount">0 characters</span>
+              <button class="clear-btn" onclick="clearInput()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                Clear
+              </button>
+            </div>
+          </div>
+          <button class="btn-primary" id="btnSummarizeText" onclick="summarizeManualText()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            <span id="summarizeBtnText">Generate Smart Summary</span>
+          </button>
+        </div>
+
+        <!-- Right: Real-time Visual Dashboard Card -->
+        <div class="glass-card" style="display: flex; flex-direction: column;" id="manualOutputContainer">
+          
+          <!-- Placeholder Screen -->
+          <div class="dashboard-placeholder" id="outputPlaceholder">
+            <div class="placeholder-icon">🧠</div>
+            <h3 style="font-family: var(--font-display); margin-bottom: 0.5rem; font-weight: 600;">Awaiting Analysis</h3>
+            <p class="placeholder-text">Your structured, bulleted summaries, sentiment scores, and glowing headlines will display here in real-time.</p>
+          </div>
+
+          <!-- Dynamic Output Loader (Initially Hidden) -->
+          <div id="outputLoader" style="display: none; padding: 2rem 0;">
+            <div class="skeleton-bar" style="width: 70%; height: 32px; margin-bottom: 1.5rem;"></div>
+            <div class="skeleton-bar" style="width: 25%; height: 28px; margin-bottom: 2rem;"></div>
+            <div class="skeleton-bar" style="height: 140px; margin-bottom: 2rem;"></div>
+            <div class="skeleton-bar" style="width: 50%; height: 24px; margin-bottom: 1rem;"></div>
+            <div class="skeleton-bar" style="width: 100%;"></div>
+            <div class="skeleton-bar" style="width: 95%;"></div>
+            <div class="skeleton-bar" style="width: 90%;"></div>
+            <div class="skeleton-bar" style="width: 95%;"></div>
+            <div class="skeleton-bar" style="width: 80%;"></div>
+          </div>
+
+          <!-- Dynamic Output Content Dashboard (Initially Hidden) -->
+          <div class="summary-dashboard" id="outputContent" style="display: none;">
+            <div class="dashboard-header">
+              <h2 class="headline-gradient" id="outHeadline">Awesome Title Headline Goes Here</h2>
+              <span class="badge-sentiment neutral" id="outSentiment">Neutral</span>
+            </div>
+            
+            <div class="output-card">
+              <p class="summary-text-block" id="outSummary">Structured summary text lines showing key paragraphs.</p>
+            </div>
+
+            <div>
+              <h4 class="bullet-list-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #8b5cf6;"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                Core Insights & Realities
+              </h4>
+              <ul class="bullet-points" id="outPoints">
+                <li>Detail point item.</li>
+                <li>Detail point item.</li>
+                <li>Detail point item.</li>
+              </ul>
+            </div>
+
+            <!-- Dashboard status indicators -->
+            <div id="outFallbackIndicator" style="display: none;">
+              <div class="alert-panel">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <span><strong>Notice:</strong> Summarized using Offline Fallback intelligence. Configure a Gemini Cloud Key or start Ollama local server inside AI Configuration for generative capability.</span>
+              </div>
+            </div>
+
+            <div class="dashboard-footer">
+              <button class="btn-secondary" onclick="copyDashboardText()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span id="btnCopyText">Copy Details</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. SETTINGS DIALOG (MODAL) -->
+    <div class="settings-backdrop" id="settingsModal">
+      <div class="settings-card">
+        <div class="settings-header">
+          <h2 class="section-title" style="margin-bottom: 0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #8b5cf6;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            AI Core Config
+          </h2>
+          <button class="settings-close" onclick="toggleSettingsModal(false)">&times;</button>
+        </div>
+
+        <div class="settings-row">
+          <label class="settings-label" for="cfgProvider">AI Summary Provider</label>
+          <select id="cfgProvider" class="select-dropdown" onchange="adjustSettingsUI()">
+            <option value="offline">Smart Offline Heuristics (Instant & Free)</option>
+            <option value="gemini">Google Gemini Cloud API (Ultra-Smart)</option>
+            <option value="ollama">Ollama local AI (100% Private & Free)</option>
+          </select>
+          <span class="settings-help">Offline mode works immediately. Cloud Gemini or Ollama require additional configuration.</span>
+        </div>
+
+        <!-- Gemini Specific Fields -->
+        <div id="providerFieldsGemini" style="display: none;">
+          <div class="settings-row">
+            <label class="settings-label" for="cfgGeminiKey">Gemini API Key</label>
+            <div class="input-wrapper">
+              <input type="password" id="cfgGeminiKey" class="input-textbox" placeholder="AIzaSy...">
+              <button class="btn-reveal" onclick="togglePasswordVisibility('cfgGeminiKey')">👁️</button>
+            </div>
+            <span class="settings-help">Stored locally in your secure browser cache. Set server environment variable `GEMINI_API_KEY` to configure server-side.</span>
+          </div>
+        </div>
+
+        <!-- Ollama Specific Fields -->
+        <div id="providerFieldsOllama" style="display: none;">
+          <div class="settings-row">
+            <label class="settings-label" for="cfgOllamaUrl">Ollama Server Endpoint</label>
+            <input type="text" id="cfgOllamaUrl" class="input-textbox" placeholder="http://localhost:11434">
+          </div>
+          <div class="settings-row">
+            <label class="settings-label" for="cfgOllamaModel">Ollama Model Name</label>
+            <input type="text" id="cfgOllamaModel" class="input-textbox" placeholder="llama3">
+            <span class="settings-help">Ensure you have started your local Ollama app and run: `ollama pull llama3` (or mistral, gemma).</span>
+          </div>
+        </div>
+
+        <button class="btn-settings-save" onclick="saveSettingsConfig()">Apply AI System Config</button>
+      </div>
+    </div>
+
+    <!-- 6. CARD SUMMARIZATION DIALOG MODAL -->
+    <div class="summary-modal" id="cardSummaryModal">
+      <div class="summary-modal-card">
+        <button class="summary-modal-close" onclick="closeSummaryModal()">&times;</button>
+        
+        <!-- Inside modal Loader -->
+        <div id="modalLoader">
+          <h3 class="section-title" style="margin-bottom: 1.5rem; text-align: center; width: 100%;">
+            🦄 Synthesizing Smart Summary
+          </h3>
+          <div class="skeleton-bar" style="width: 70%; height: 28px; margin-bottom: 1.5rem;"></div>
+          <div class="skeleton-bar" style="width: 25%; height: 24px; margin-bottom: 2rem;"></div>
+          <div class="skeleton-bar" style="height: 120px; margin-bottom: 1.5rem;"></div>
+          <div class="skeleton-bar" style="width: 90%;"></div>
+          <div class="skeleton-bar" style="width: 95%;"></div>
+          <div class="skeleton-bar" style="width: 85%;"></div>
+          <div class="skeleton-bar" style="width: 90%;"></div>
+        </div>
+
+        <!-- Error panel in modal -->
+        <div id="modalError" style="display: none;">
+          <div class="alert-panel error">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <span id="modalErrorText">An error occurred while synthesizing news.</span>
+          </div>
+        </div>
+
+        <!-- Output in modal -->
+        <div class="summary-dashboard" id="modalOutputContent" style="display: none;">
+          <div class="dashboard-header">
+            <h2 class="headline-gradient" id="modalHeadline" style="font-size: 1.45rem;">Sleek Headline Title</h2>
+            <span class="badge-sentiment positive" id="modalSentiment">Positive</span>
+          </div>
+          
+          <div class="output-card" style="padding: 1.25rem;">
+            <p class="summary-text-block" id="modalSummary" style="font-size: 0.925rem;">Summary narrative.</p>
+          </div>
+
+          <div>
+            <h4 class="bullet-list-title" style="font-size: 0.95rem; margin-bottom: 0.65rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #8b5cf6;"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+              Core Analysis Breakdown
+            </h4>
+            <ul class="bullet-points" id="modalPoints" style="gap: 0.6rem;">
+              <li style="font-size: 0.875rem;">Point detail</li>
+            </ul>
+          </div>
+
+          <div id="modalFallbackIndicator" style="display: none;">
+            <div class="alert-panel" style="margin-bottom: 0;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              <span>Offline Fallback intelligence applied. Open <strong>AI Configuration</strong> to configure Gemini/Ollama.</span>
+            </div>
+          </div>
+
+          <div class="dashboard-footer" style="padding-top: 0.5rem; margin-top: 0.5rem;">
+            <button class="btn-secondary" onclick="copyModalSummaryText()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span id="btnModalCopyText">Copy Summary Details</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==========================================================================
+       CLIENT-SIDE JAVASCRIPT LOGIC
+       ========================================================================== */ -->
+  <script>
+    // State Variables
+    const API_BASE_URL = 'http://localhost:3000';
+    let currentCategory = 'all';
+    let serverOnline = false;
+    let globalActiveView = 'news';
+
+    // Global variable to store active summary results for copying
+    let activeSummaryResult = null;
+
+    // Load AI configurations on startup
+    const aiConfig = {
+      provider: localStorage.getItem('quicknews_provider') || 'offline',
+      geminiKey: localStorage.getItem('quicknews_geminiKey') || '',
+      ollamaUrl: localStorage.getItem('quicknews_ollamaUrl') || 'http://localhost:11434',
+      ollamaModel: localStorage.getItem('quicknews_ollamaModel') || 'llama3'
+    };
+
+    // Initialize Page
+    document.addEventListener("DOMContentLoaded", () => {
+      // Sync form fields from storage variables
+      document.getElementById('cfgProvider').value = aiConfig.provider;
+      document.getElementById('cfgGeminiKey').value = aiConfig.geminiKey;
+      document.getElementById('cfgOllamaUrl').value = aiConfig.ollamaUrl;
+      document.getElementById('cfgOllamaModel').value = aiConfig.ollamaModel;
+
+      adjustSettingsUI();
+      checkServerHealth();
+      
+      // Pull initial news feed
+      fetchLiveNews();
+
+      // Ambient cursor tracking setup
+      setupAmbientSpotlight();
+    });
+
+    // Check health of node express backend
+    async function checkServerHealth() {
+      const dot = document.getElementById("serverStatusDot");
+      const text = document.getElementById("serverStatusText");
+      
+      try {
+        const res = await fetch(`${API_BASE_URL}/health`);
+        const data = await res.json();
+        
+        if (data.status === 'healthy') {
+          serverOnline = true;
+          dot.classList.add("connected");
+          text.textContent = "Server Online";
+          document.getElementById("serverStatusBadge").style.borderColor = "rgba(16, 185, 129, 0.2)";
+        } else {
+          throw new Error();
+        }
+      } catch (err) {
+        serverOnline = false;
+        dot.classList.remove("connected");
+        text.textContent = "Server Offline";
+        document.getElementById("serverStatusBadge").style.borderColor = "rgba(239, 68, 68, 0.2)";
+        console.error("Backend Server is Offline. Make sure node index.js is running.");
+      }
+    }
+
+    // Toggle navigation tab views
+    function switchView(viewName) {
+      globalActiveView = viewName;
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll(".view-section").forEach(sec => sec.classList.remove("active"));
+
+      if (viewName === 'news') {
+        document.getElementById("tabNews").classList.add("active");
+        document.getElementById("viewNews").classList.add("active");
+        fetchLiveNews(); // Refresh news automatically
+      } else if (viewName === 'manual') {
+        document.getElementById("tabManual").classList.add("active");
+        document.getElementById("viewManual").classList.add("active");
+        updateCharCount();
+      }
+    }
+
+    // Dynamic Setting UI display controls
+    function adjustSettingsUI() {
+      const provider = document.getElementById('cfgProvider').value;
+      const geminiFields = document.getElementById('providerFieldsGemini');
+      const ollamaFields = document.getElementById('providerFieldsOllama');
+
+      geminiFields.style.display = (provider === 'gemini') ? 'block' : 'none';
+      ollamaFields.style.display = (provider === 'ollama') ? 'block' : 'none';
+    }
+
+    function togglePasswordVisibility(fieldId) {
+      const field = document.getElementById(fieldId);
+      field.type = (field.type === 'password') ? 'text' : 'password';
+    }
+
+    // Modal display states
+    function toggleSettingsModal(isOpen) {
+      const modal = document.getElementById("settingsModal");
+      if (isOpen) {
+        modal.classList.add("open");
+      } else {
+        modal.classList.remove("open");
+      }
+    }
+
+    // Save UI config options to localStorage
+    function saveSettingsConfig() {
+      aiConfig.provider = document.getElementById('cfgProvider').value;
+      aiConfig.geminiKey = document.getElementById('cfgGeminiKey').value;
+      aiConfig.ollamaUrl = document.getElementById('cfgOllamaUrl').value;
+      aiConfig.ollamaModel = document.getElementById('cfgOllamaModel').value;
+
+      localStorage.setItem('quicknews_provider', aiConfig.provider);
+      localStorage.setItem('quicknews_geminiKey', aiConfig.geminiKey);
+      localStorage.setItem('quicknews_ollamaUrl', aiConfig.ollamaUrl);
+      localStorage.setItem('quicknews_ollamaModel', aiConfig.ollamaModel);
+
+      toggleSettingsModal(false);
+      
+      // Update primary manual summary button label based on mode
+      const btnText = document.getElementById("summarizeBtnText");
+      if (aiConfig.provider === 'offline') {
+        btnText.textContent = "Generate Smart Summary";
+      } else if (aiConfig.provider === 'gemini') {
+        btnText.textContent = "Summarize with Gemini API";
+      } else {
+        btnText.textContent = `Summarize with Ollama (${aiConfig.ollamaModel})`;
+      }
+    }
+
+    // ==========================================================================
+    // MANUAL SUMMARIZATION LOGIC
+    // ==========================================================================
+    function updateCharCount() {
+      const text = document.getElementById("newsInput").value;
+      document.getElementById("charCount").textContent = `${text.length} characters`;
+    }
+
+    function clearInput() {
+      document.getElementById("newsInput").value = "";
+      updateCharCount();
+      
+      // Reset dashboard visual states
+      document.getElementById("outputPlaceholder").style.display = "flex";
+      document.getElementById("outputLoader").style.style = "none";
+      document.getElementById("outputContent").style.display = "none";
+    }
+
+    async function summarizeManualText() {
+      const text = document.getElementById("newsInput").value.trim();
+      const placeholder = document.getElementById("outputPlaceholder");
+      const loader = document.getElementById("outputLoader");
+      const content = document.getElementById("outputContent");
+
+      if (text.length < 50) {
+        alert("Please enter a longer news article (minimum 50 characters) to analyze.");
+        return;
+      }
+
+      // Ensure server health is checked first
+      await checkServerHealth();
+      
+      if (!serverOnline) {
+        alert("QuickNews Node Server is Offline. Please launch backend or ensure it is running on http://localhost:3000");
+        return;
+      }
+
+      // Hide results, show loading skeleton
+      placeholder.style.display = "none";
+      content.style.display = "none";
+      loader.style.display = "block";
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/summarize`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: text,
+            provider: aiConfig.provider,
+            geminiKey: aiConfig.geminiKey,
+            ollamaModel: aiConfig.ollamaModel,
+            ollamaUrl: aiConfig.ollamaUrl
+          })
+        });
+
+        if (!response.ok) {
+          const errBody = await response.json().catch(() => ({}));
+          throw new Error(errBody.error || `HTTP ${response.status} returned by server.`);
+        }
+
+        const data = await response.json();
+        
+        // Save globally for copying
+        activeSummaryResult = data;
+        
+        // Render result inside manual summary dashboard
+        renderManualSummary(data);
+
+      } catch (err) {
+        console.error(err);
+        alert(`Summarization Failed: ${err.message}`);
+        // Reset to placeholder
+        loader.style.display = "none";
+        placeholder.style.display = "flex";
+      }
+    }
+
+    function renderManualSummary(data) {
+      document.getElementById("outputLoader").style.display = "none";
+      document.getElementById("outputContent").style.display = "flex";
+
+      // Set headline
+      document.getElementById("outHeadline").textContent = data.headline || "Analyzed News Summary";
+
+      // Set sentiment
+      const sentimentBadge = document.getElementById("outSentiment");
+      const sentiment = (data.sentiment || "Neutral").trim();
+      sentimentBadge.textContent = sentiment;
+      
+      // Update sentiment classes for CSS colors
+      sentimentBadge.className = "badge-sentiment " + sentiment.toLowerCase();
+
+      // Set summary paragraph
+      document.getElementById("outSummary").textContent = data.summary || "No summary text generated.";
+
+      // Populate list items
+      const listContainer = document.getElementById("outPoints");
+      listContainer.innerHTML = "";
+      if (data.points && Array.isArray(data.points)) {
+        data.points.forEach(point => {
+          const li = document.createElement("li");
+          li.textContent = point;
+          listContainer.appendChild(li);
+        });
+      } else {
+        listContainer.innerHTML = "<li>No bullet details analyzed.</li>";
+      }
+
+      // Toggle offline indicator warning panels
+      const warningPanel = document.getElementById("outFallbackIndicator");
+      if (data.isOffline) {
+        warningPanel.style.display = "block";
+      } else {
+        warningPanel.style.display = "none";
+      }
+    }
+
+    function copyDashboardText() {
+      if (!activeSummaryResult) return;
+
+      const formatted = `📰 HEADLINE: ${activeSummaryResult.headline}
+📊 SENTIMENT: ${activeSummaryResult.sentiment}
+
+📝 SUMMARY:
+${activeSummaryResult.summary}
+
+✦ KEY FACTS:
+${activeSummaryResult.points.map(p => `• ${p}`).join('\n')}
+
+Generated via QuickNews AI (No-DB MCP Engine)`;
+
+      navigator.clipboard.writeText(formatted).then(() => {
+        const btnText = document.getElementById("btnCopyText");
+        btnText.textContent = "Copied ✓";
+        setTimeout(() => { btnText.textContent = "Copy Details"; }, 2000);
+      });
+    }
+
+    // ==========================================================================
+    // LIVE NEWS FEED LOGIC
+    // ==========================================================================
+    function setNewsCategory(category, button) {
+      currentCategory = category;
+      
+      // Toggle category tab highlight classes
+      document.querySelectorAll(".category-btn").forEach(btn => btn.classList.remove("active"));
+      button.classList.add("active");
+
+      fetchLiveNews();
+    }
+
+    async function fetchLiveNews() {
+      const container = document.getElementById("articlesContainer");
+      
+      // Show loading skeletons inside news feed grid
+      container.innerHTML = `
+        <div class="skeleton-card">
+          <div class="skeleton-bar" style="width: 30%;"></div>
+          <div class="skeleton-bar" style="height: 24px; width: 90%;"></div>
+          <div class="skeleton-bar" style="width: 85%;"></div>
+          <div class="skeleton-bar" style="width: 40%; margin-bottom: 0;"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-bar" style="width: 25%;"></div>
+          <div class="skeleton-bar" style="height: 24px; width: 95%;"></div>
+          <div class="skeleton-bar" style="width: 80%;"></div>
+          <div class="skeleton-bar" style="width: 45%; margin-bottom: 0;"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-bar" style="width: 28%;"></div>
+          <div class="skeleton-bar" style="height: 24px; width: 88%;"></div>
+          <div class="skeleton-bar" style="width: 85%;"></div>
+          <div class="skeleton-bar" style="width: 35%; margin-bottom: 0;"></div>
+        </div>
+      `;
+
+      // Check Server Status
+      await checkServerHealth();
+      
+      if (!serverOnline) {
+        container.innerHTML = `
+          <div class="glass-card" style="grid-column: 1 / -1; text-align: center; padding: 3rem 1.5rem; background: rgba(244, 63, 94, 0.04); border-color: rgba(244,63,94,0.15);">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+            <h3 style="font-family: var(--font-display); color: #f43f5e; margin-bottom: 0.5rem; font-weight: 700;">Backend Server Connection Error</h3>
+            <p style="color: var(--text-muted); font-size: 0.925rem; max-width: 420px; margin: 0 auto 1.5rem auto;">
+              The QuickNews MCP backend server is offline. In order to pull live news and use summarizing tools, please ensure the server is launched locally.
+            </p>
+            <button class="btn-secondary" onclick="fetchLiveNews()" style="background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.2); color: #fb7185;">
+              Retry Connection
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/news?category=${currentCategory}`);
+        
+        if (!response.ok) throw new Error("Could not retrieve RSS articles.");
+        
+        const data = await response.json();
+        
+        if (!data.articles || data.articles.length === 0) {
+          container.innerHTML = `
+            <div class="glass-card" style="grid-column: 1 / -1; text-align: center; padding: 3rem 1.5rem;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+              <h3 style="font-family: var(--font-display); margin-bottom: 0.5rem; font-weight: 700;">No Articles Found</h3>
+              <p style="color: var(--text-muted); font-size: 0.925rem;">We couldn't parse any RSS articles for this category. Please try a different category.</p>
+            </div>
+          `;
+          return;
+        }
+
+        renderNewsFeed(data.articles);
+
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `
+          <div class="glass-card" style="grid-column: 1 / -1; text-align: center; padding: 3rem 1.5rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">❌</div>
+            <h3 style="font-family: var(--font-display); color: #f43f5e; margin-bottom: 0.5rem;">RSS News Gathering Error</h3>
+            <p style="color: var(--text-muted); font-size: 0.925rem;">Could not download the news feed. Error: ${err.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderNewsFeed(articles) {
+      const container = document.getElementById("articlesContainer");
+      container.innerHTML = "";
+
+      articles.forEach((art, idx) => {
+        // Create standard beautiful card components
+        const card = document.createElement("div");
+        card.className = "article-card";
+        // Fade-in animation staggering
+        card.style.animation = `fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 0.05}s forwards`;
+        card.style.opacity = "0";
+
+        // Parse date for visual quality
+        let visualDate = 'Recent';
+        if (art.pubDate) {
+          try {
+            const dateObj = new Date(art.pubDate);
+            visualDate = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          } catch(e) {}
+        }
+
+        // We escape double quotes to avoid breaking standard element string injection
+        const escapedTitle = art.title.replace(/"/g, '&quot;');
+        const escapedDesc = art.description.replace(/"/g, '&quot;');
+
+        card.innerHTML = `
+          <div class="card-meta">
+            <span class="article-source">${art.source || 'Google News'}</span>
+            <span class="article-date">${visualDate}</span>
+          </div>
+          <a href="${art.link}" target="_blank" class="article-title" title="Open source article in a new tab">${art.title}</a>
+          <p class="article-snippet">${art.description || 'No teaser description available for this story.'}</p>
+          
+          <div class="card-actions">
+            <a href="${art.link}" target="_blank" class="btn-card-action">
+              Original Source
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+            </a>
+            <button class="btn-card-summarize" onclick="summarizeLiveArticle(\`${escapedTitle}\`, \`${escapedDesc}\`)">
+              ⚡ Summarize
+            </button>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // ==========================================================================
+    // ARTICLE INSTANT POPUP CARD SUMMARIZATION LOGIC
+    // ==========================================================================
+    let modalSummaryResult = null;
+
+    function openSummaryModal() {
+      document.getElementById("cardSummaryModal").classList.add("open");
+    }
+
+    function closeSummaryModal() {
+      document.getElementById("cardSummaryModal").classList.remove("open");
+    }
+
+    async function summarizeLiveArticle(title, description) {
+      openSummaryModal();
+      
+      const loader = document.getElementById("modalLoader");
+      const errorPanel = document.getElementById("modalError");
+      const content = document.getElementById("modalOutputContent");
+
+      // Set initial states
+      loader.style.display = "block";
+      errorPanel.style.display = "none";
+      content.style.display = "none";
+
+      const textBodyToSummarize = `Title: ${title}. Description: ${description}.`;
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/summarize`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: textBodyToSummarize,
+            provider: aiConfig.provider,
+            geminiKey: aiConfig.geminiKey,
+            ollamaModel: aiConfig.ollamaModel,
+            ollamaUrl: aiConfig.ollamaUrl
+          })
+        });
+
+        if (!response.ok) {
+          const errBody = await response.json().catch(() => ({}));
+          throw new Error(errBody.error || `HTTP ${response.status} returned by server.`);
+        }
+
+        const data = await response.json();
+        
+        // Stash result globally
+        modalSummaryResult = data;
+
+        // Render data elements
+        renderModalSummary(data);
+
+      } catch (err) {
+        console.error(err);
+        loader.style.display = "none";
+        errorPanel.style.display = "block";
+        document.getElementById("modalErrorText").textContent = `Instant Summary Failed: ${err.message}`;
+      }
+    }
+
+    function renderModalSummary(data) {
+      document.getElementById("modalLoader").style.display = "none";
+      document.getElementById("modalOutputContent").style.display = "flex";
+
+      // Set Title Headline
+      document.getElementById("modalHeadline").textContent = data.headline || "Live News Summary";
+
+      // Set Sentiment
+      const sentimentBadge = document.getElementById("modalSentiment");
+      const sentiment = (data.sentiment || "Neutral").trim();
+      sentimentBadge.textContent = sentiment;
+      sentimentBadge.className = "badge-sentiment " + sentiment.toLowerCase();
+
+      // Set Summary Paragraph
+      document.getElementById("modalSummary").textContent = data.summary || "No summary text generated.";
+
+      // Populate Points List
+      const listContainer = document.getElementById("modalPoints");
+      listContainer.innerHTML = "";
+      if (data.points && Array.isArray(data.points)) {
+        data.points.forEach(point => {
+          const li = document.createElement("li");
+          li.textContent = point;
+          listContainer.appendChild(li);
+        });
+      } else {
+        listContainer.innerHTML = "<li>No bullet details analyzed.</li>";
+      }
+
+      // Check Offline heuristics fallback banner
+      const fallbackBanner = document.getElementById("modalFallbackIndicator");
+      if (data.isOffline) {
+        fallbackBanner.style.display = "block";
+      } else {
+        fallbackBanner.style.display = "none";
+      }
+    }
+
+    function copyModalSummaryText() {
+      if (!modalSummaryResult) return;
+
+      const formatted = `📰 HEADLINE: ${modalSummaryResult.headline}
+📊 SENTIMENT: ${modalSummaryResult.sentiment}
+
+📝 SUMMARY:
+${modalSummaryResult.summary}
+
+✦ KEY FACTS:
+${modalSummaryResult.points.map(p => `• ${p}`).join('\n')}
+
+Generated via QuickNews AI (No-DB MCP Engine)`;
+
+      navigator.clipboard.writeText(formatted).then(() => {
+        const btnText = document.getElementById("btnModalCopyText");
+        btnText.textContent = "Copied Summary ✓";
+        setTimeout(() => { btnText.textContent = "Copy Summary Details"; }, 2000);
+      });
+    }
+
+    // ==========================================================================
+    // AMBIENT VISUAL FX (MOUSE FOLLOW SPOTLIGHTS)
+    // ==========================================================================
+    function setupAmbientSpotlight() {
+      const cursorGlow = document.getElementById("cursorGlow");
+      
+      document.addEventListener("mousemove", (e) => {
+        cursorGlow.style.opacity = "1";
+        cursorGlow.style.left = `${e.clientX}px`;
+        cursorGlow.style.top = `${e.clientY}px`;
+      });
+
+      document.addEventListener("mouseleave", () => {
+        cursorGlow.style.opacity = "0";
+      });
+    }
+  </script>
+</body>
+</html>
